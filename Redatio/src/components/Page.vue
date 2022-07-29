@@ -1,65 +1,69 @@
 <template>
 <div >
-    <h1>{{title}}</h1>
-    <div v-if="lines"> 
-        <p v-for="(line,index) in lines" :key="index">
-            <template v-if="line.type==='header'">
-                <div class="header">
-                    <span 
-                        class="Word" 
-                        :class="{hide: !wordDict[word].hit, show: wordDict[word].hit}"
-                        v-for="(word, y) in line.l" :key="y"> 
-                        {{word +' '}}
-                    </span>
-                </div>
-            </template>
-
-            <template v-else>
-                <span 
-                    class="Word" 
-                    :class="{hide: !wordDict[word], show: wordDict[word]}"
-                    v-for="(word, y) in line.l" :key="y"> {{word+' '}}</span>
-            </template>
-        </p>
-    </div>
-    <div v-else>
-        Carregando...
-    </div>
-    <Game :word="{wordShow}"/>
+    <DisplayPage :all="all" :won="won"></DisplayPage>
+    <UserInput @submit="playRound"/>
+    <Game :wordG="wordShow"></Game>
 </div>
 </template>
 
 <script>
 import Game from './Game.vue'
+import DisplayPage from './DisplayPage.vue'
+import UserInput from './UserInput.vue'
+import {latinise} from '../../latinize'
+
 export default {
     components:{
-        Game
-    },
-    props:{
-        word : String
+        Game,
+        UserInput,
+        DisplayPage
     },
     data(){
         return {
-            title: null,
-            pageText : null,
-            wordDict : {},
+            title : '',
+            titleD: {},
+            wordDict: {},
+            lines : [],
             wordShow : {},
-            lines: [],
         }
     },
     created(){
-        this.fetchPage();
+
+        this.fetchPage().then((page) =>{
+            let t= Object.values(page.query.pages)[0].title;
+            let obj = this.parseWikiText(Object.values(page.query.pages)[0].extract);
+            this.title = t.split(' ');
+            this.title.forEach((word) => {
+                this.titleD[word.toLowerCase()]= {original: word, hit:false}
+            });
+
+            console.log(this.title);
+            this.wordDict = obj.wordDict;
+            this.lines = obj.lines;
+        }
+        )
     },
-    mounted(){
-    },
-    watch : {
-        word(word){
-            this.playRound(word);
+    computed:{
+        won(){
+            for(const word of Object.values(this.titleD)){
+                if(!word.hit){
+                    return false;
+                }
+            }
+            return true;
+        },
+        all(){
+            return {
+            title : this.title,
+            titleD: this.titleD,
+            wordDict: this.wordDict,
+            lines : this.lines,
+            }
         }
     },
+
     methods: {
-        async fetchPage(){  
-            let page = null;
+        async fetchPage(){
             let url = "https://pt.wikipedia.org/w/api.php?" + 
                     "format=json"+
                     "&action=query"+
@@ -71,83 +75,110 @@ export default {
                     "&rvprop=content";
             let headers ={};
 
-            try {
-                let res = await fetch(url, {
+            const page = await fetch(url, {
                     method : "GET",
                     mode: 'cors',
                     headers: headers
-                });
-                page = await res.json();
-            } catch(error) {
-                console.log(error);
-            }
+                }).then(res=> res.json());
+
             console.log(page);
-            this.title = Object.values(page.query.pages)[0].title;
-            this.parseWikiText(Object.values(page.query.pages)[0].extract);
-        },
-        changeWord(word){
-            this.wordDict[word].hit = true;
-        },
-        playRound(word){
-            if(this.wordDict[word]){
-                this.changeWord(word);
-                this.wordShow = { w:word, hits: this.wordDict[word].n};
-            }
+            return page;
         },
         parseWikiText(text){
-            const lines = text.split('\n');
+            let linesArr= [];
+            let wordDict={};
             let words = [];
-            for ( let i = 0; i < lines.length; i++){
-                console.log(lines[i]);
-                if(lines[i][0]==="="){
-                    let h = lines[i].split(' ').filter((el)=>el!=="==")
+
+            const lines = text.split('\n');
+
+            console.log(lines);
+            lines.forEach(el => {
+                console.log(el);
+                if(el[0]==="="){
+                    let h = el.split(' ').filter((e)=>e!=="==")
                     if(h[0]!=="Referências"){
-                        words.concat(h);
-                        this.lines.push(
+                        words = words.concat(h);
+                        linesArr.push(
                             {l : h, 
                             type: 'header'});
                     }
                 }
-                else{
-                    let t = lines[i].split(' ');
-                    words.concat(t);
-                    this.lines.push({l : t, type : 'text'});
+                else if(!/^[a-zA-Z]+$/.test(el) && el){
+                    let t = el.split(' ');
+                    words = words.concat(t);
+                    linesArr.push({l : t, type : 'text'});
                 }
-            }
-            words.forEach((el)=>{
-                if(this.wordDict[el]){
-                    this.wordDict[el].n++;
+            });
+
+            console.log(words);
+            wordDict = this.createWordDict(words);
+
+            return {wordDict : wordDict, lines: linesArr}
+        },
+        createWordDict(words){
+            let wordDict = {};
+            words.forEach((word)=>{
+                word = word.toLowerCase();
+                if(wordDict[word]){
+                    wordDict[word].n++;
                 }
                 else{
-                    this.wordDict[el] = {hit:false, n:1}
+                    wordDict[word] = {
+                        original: word, 
+                        similar:[],
+                        hit:false, 
+                        n:1}
                 }                
             }
             );
-            
+            words.forEach((word)=>{
+                word = word.toLowerCase();
+                let transformed = latinise(word).toLowerCase();
+                if(word !== transformed && wordDict[transformed]){
+                    wordDict[transformed].similar.push(word);
+                }
+            });
+            return wordDict;
+        },
+        latinise(word){
+            return latinise(word);
+        },
+        changeWordObj(obj, word){
+            let transformed = latinise(word).toLowerCase();
+            word = word.toLowerCase();
+            if(obj[word]){
+                obj[word].hit = true;
+                if(transformed === word){
+                    if(obj[word].similar !== undefined){
+                        if(obj[word].similar !== []){
+                            obj[word].similar
+                                .forEach((w) =>{
+                                    obj[w].hit = true;
+                                });
+                        }
+                    }
+                }
+            }
+            return {obj:obj, word:obj[word]};
+        },
+        hitWord(word){
+            let wd = this.changeWordObj(this.wordDict, word),
+                td = this.changeWordObj(this.titleD, word);
+            this.wordDict = wd.obj;
+            this.titleD   = td.obj;
+            this.wordShow = wd.word? {w:word, hits:wd.word.n} 
+                            : {w: word, hits:0};
+        },
+        playRound(word){
+            console.log(word);
 
-        }
+            if(word){
+                this.hitWord(word);
+            }
+        },
     }
 }
 </script>
 
 <style>
-:root{
-    --hide : rgb(119, 119, 119);
-}
-.header{
-    font-size: large;
-}
-.Word.hide {
-    -webkit-touch-callout: none; /* iOS Safari */
-    -webkit-user-select: none; /* Safari */
-     -khtml-user-select: none; /* Konqueror HTML */
-       -moz-user-select: none; /* Old versions of Firefox */
-        -ms-user-select: none; /* Internet Explorer/Edge */
-            user-select: none; 
-    margin-right: 1%;
-    color: var(--hide);
-    background-color: var(--hide);
-    
-
-}
 </style>

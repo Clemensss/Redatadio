@@ -1,28 +1,26 @@
-<script setup>
-import Page from './Page.vue'
-</script>
-
 <template>
-<div>
+<div v-on:keyup.enter="onSubmit()">
     <input :value="userInput" @input="onInput">
-    <Page :word="{userInput}"/>
 </div>
 </template>
 
 <script>
 export default {
-    components:{
-        Page
-    },
     data() {
         return {
-            userInput: ''
+            userInput: '',
+            submit : ''
             
         }
     },
+
     methods: {
         onInput(e) {
-            this.userInput = e.target.value
+            this.userInput = e.target.value;
+        },
+        onSubmit(){
+            this.$emit('submit', this.userInput.toLowerCase());
+            this.userInput = '';
         }
     }
 }

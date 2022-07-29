@@ -1,20 +1,19 @@
 <script setup lang="ts">
-import UserInput  from '../components/UserInput.vue'
+import Page  from '../components/Page.vue'
 
 
 </script>
 
 <template>
   <main>
-    <UserInput />
-    <Page />
+    <page ></page>
   </main>
 </template>
 
 <script lang="ts">
 export default {
   components: {
-    UserInput,
+    Page,
   }
 }
 </script>
