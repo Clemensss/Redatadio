@@ -1,36 +1,23 @@
 <template>
     <div v-if="all.wordDict !== {}"> 
-        <h1> 
-            <span 
-                class="Title" 
-                :class="{hide: !all.titleD[word.toLowerCase()].hit, 
-                        show: all.titleD[word.toLowerCase()].hit}"
-                v-for="(word, i) in all.title"
-                :key="i"> 
-            {{word + ' '}}
-            </span>
-        </h1>
         <p v-for="(line,index) in all.lines " :key="index">
-            <template v-if="line.type==='header'">
-                <div class="header">
+                <div :class=line.type>
                     <span 
                         class="Word" 
-                        :class="{hide: !all.wordDict[word.toLowerCase()]['hit'], 
-                                show: all.wordDict[word.toLowerCase()]['hit'] 
-                                        || all.won}"
-                        v-for="(word, y) in line.l" :key="y"> 
-                        {{word +' '}}
+                        :class="{hide: !hitOrNot(word.el),
+                                show: hitOrNot(word.el) 
+                                        || all.won
+                                        || word.type === 'char'}"
+                        v-for="(word, y) in line.line" :key="y"> 
+                            <template v-if="word.type==='word'">
+                                {{' ' + word.el}}
+                            </template>
+                            <template v-else>
+                                {{word.el +' '}}
+                            </template>
                     </span>
                 </div>
-            </template>
 
-            <template v-else>
-                <span 
-                    class="Word" 
-                    :class="{hide: !all.wordDict[word.toLowerCase()].hit, 
-                             show: all.wordDict[word.toLowerCase()].hit || won}"
-                    v-for="(word, y) in line.l" :key="y"> {{word+' '}}</span>
-            </template>
         </p>
     </div>
     <div v-else>
@@ -44,6 +31,39 @@ export default {
     props : {
         all : Object,
         won : Boolean
+    },
+    methods :{
+        hitOrNot(word){
+            if(this.all.wordDict[word.toLowerCase()]){
+                return this.all.wordDict[word.toLowerCase()].hit;
+            }
+            else return false;
+        },
+        selection(word){
+            this.selectUnselect(this.lastSelection);
+            this.selectUnselect(word);
+            this.lastSelection = word;
+            this.selectionArr = document.getElementsByClassName(word);
+            this.selectionIndex = 0;
+        },
+        selectUnselect(word){
+            this.wordDict[word].selected = !this.wordDict[word].selected;
+            this.wordDict[word].similar.forEach((s) =>{
+                this.wordDict[s].selected = !this.wordDict[s].selected;
+            });
+        },
+        nextSelection(){
+            this.selectionIndex.last = this.selectionIndex.curr;
+            this.selectionIndex.curr++;
+            if(this.selectionIndex.curr === this.selectionArr.length){
+                this.selectionIndex=0;
+            }
+        },
+        stopSelect(){
+            this.selectionIndex = -1;
+            this.selectionArr = [];
+        },
+
     }
 }
 </script>
@@ -54,8 +74,20 @@ export default {
     --bg : rgb(255, 255, 255);
     --fg : rgb(0, 0, 0);
 }
+.title{
+    font-size: 30px;
+    margin-bottom: 4px;
+}
 .header{
-    font-size: large;
+    font-size: 22px;
+    border: 2px;
+    margin-bottom: 0;
+    border-color: rgb(134, 126, 126);
+    border-bottom-style:solid; 
+}
+.header2{
+    font-size: 20px;
+    font-weight: bold;
 }
 .hide {
     -webkit-touch-callout: none; /* iOS Safari */
