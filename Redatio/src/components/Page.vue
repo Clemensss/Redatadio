@@ -27,29 +27,34 @@ export default {
             lines : [],
             wordsArr : [],
             wordShow : {},
-            winCounter : {hits: 0, win: 0}
+            titleArr : [],
         }
     },
     created(){
 
         this.fetchPage().then((page) =>{
             this.title =  Object.values(page.query.pages)[0].title;
-            this.winCounter.win = this.title.split(' ').length;
-
-            console.log( this.winCounter);
-
+            console.log(this.title);
             let text = Object.values(page.query.pages)[0].extract;
             this.parseWikiText('?? ' + this.title + '\n' + text);
+            this.createWordDict();
         }
         )
-    },
-    watch:{
     },
     computed:{
         
         won(){
-            if(this.winCounter.hits >=  this.winCounter.win){
-                return true;
+            if(this.wordDict !== {}){
+                console.log(this.titleArr);
+                let stupid = 0;
+                this.titleArr.forEach((word) => {
+                    console.log(word + ' ' + this.wordDict[word].hit);
+                        if(!this.wordDict[word].hit){
+                            console.log("won");
+                            stupid++;
+                        }
+                });
+                return stupid === 0;
             }
             return false;
         },
@@ -68,12 +73,13 @@ export default {
             let url = "https://pt.wikipedia.org/w/api.php?" + 
                     "format=json"+
                     "&action=query"+
-                    "&generator=random"+
+                    "&titles=Mercado_livre"+
                     "&origin=*"+
                     "&grnnamespace=0"+
                     "&prop=extracts"+
                     "&explaintext=1"+
                     "&rvprop=content";
+
             let headers ={};
 
             const page = await fetch(url, {
@@ -94,8 +100,6 @@ export default {
                     temp = temp + c;
                 }
                 else{
-                    console.log('caracter');
-                    console.log(c);
 
                     if(temp !== ''){ 
                         arr.push({'el' : temp, 
@@ -136,8 +140,6 @@ export default {
                     el === '==' || el === '===' || el === '??' ? 
                     search = el : false;
                 });
-                console.log("search");
-                console.log(search);
                 switch(search){
                     case '==':
                         type = 'header';
@@ -156,10 +158,11 @@ export default {
 
                 wordSplit.filter((e) => e !== '')
                         .forEach((word) => {
-                            console.log(word);
                                 elArr = elArr.concat(this.checkWordChar(word));
                                 elArr.forEach((w) =>{
-                                    if(type === 'title') w.title = true;
+                                    if(type === 'title') {
+                                        w.title = true;
+                                    }
                                 });
                 });
 
@@ -177,13 +180,14 @@ export default {
             let wordDict = {};
             //first pass to orginize words
             this.wordsArr.forEach((obj)=>{
-                let element = obj.el.toLowerCase();
-                if(wordDict[element]){
-                    wordDict[element].n++;
+                let word = obj.el.toLowerCase();
+                if(wordDict[word]){
+                    wordDict[word].n++;
                 }
                 else if(obj.type === 'word' || obj.type === 'number'){
-                    wordDict[element] = {
-                        original: element, 
+                    if(obj.title) this.titleArr.push(word);
+                    wordDict[word] = {
+                        original: word, 
                         similar:[],
                         hit:false, 
                         title: obj.title,
@@ -208,7 +212,7 @@ export default {
                         similar:[],
                         hit:false, 
                         n:2,
-                        title:false,
+                        title:wordDict[word].title,
                         selected: false}
                     wordDict[transformed].similar.push(word);
                     if(wordDict[word]) wordDict[word].n++;
@@ -224,8 +228,10 @@ export default {
             let transformed = latinise(word).toLowerCase();
             word = word.toLowerCase();
             if(obj[word]){
+                console.log(word);
                 obj[word].hit = true;
-                if(obj[word].title) this.winCounter.hits++;
+                if(obj[word].title) {
+                }
                 if(transformed === word){
                     if(obj[word].similar !== undefined){
                         if(obj[word].similar !== []){
@@ -243,11 +249,10 @@ export default {
         hitWord(word){
             let obj = this.changeWordObj(this.wordDict, word);
             this.wordDict = obj.wordDict;
-            this.wordShow = obj.word? {w:word, hits:wd.word.n} 
+            this.wordShow = obj.word? {w:word, hits:obj.word.n} 
                             : {w: word, hits:0};
         },
         playRound(word){
-            console.log(word);
 
             if(word){
                 this.hitWord(word);

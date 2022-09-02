@@ -4,10 +4,7 @@
                 <div :class=line.type>
                     <span 
                         class="Word" 
-                        :class="{hide: !hitOrNot(word.el),
-                                show: hitOrNot(word.el) 
-                                        || all.won
-                                        || word.type === 'char'}"
+                        :class="showOrHide(word)"
                         v-for="(word, y) in line.line" :key="y"> 
                             <template v-if="word.type==='word'">
                                 {{' ' + word.el}}
@@ -38,6 +35,17 @@ export default {
                 return this.all.wordDict[word.toLowerCase()].hit;
             }
             else return false;
+        },
+        showOrHide(word){
+            console.log(this.won);
+            if(this.hitOrNot(word.el) 
+                || word.type === 'char'
+                || this.won){
+                    return 'show';
+            }
+            else{
+                return 'hide';
+            }
         },
         selection(word){
             this.selectUnselect(this.lastSelection);
