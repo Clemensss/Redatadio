@@ -19,8 +19,14 @@ export default {
             this.userInput = e.target.value;
         },
         onSubmit(){
-            this.$emit('submit', this.userInput.toLowerCase());
-            this.userInput = '';
+            let cleanInput = this.userInput.toLowerCase().trim();
+            if(cleanInput.split(' ').length === 1){
+                this.$emit('submit', cleanInput);
+                this.userInput = '';
+            }
+            else{
+
+            }
         }
     }
 }

@@ -1,10 +1,16 @@
 <template>
 <div class="Board">
-    <DisplayPage class="Page" :all="all" :won="won"></DisplayPage>
     <div class="Score">
         <UserInput @submit="playRound"/>
-        <Game class="Game" @word="selection" :wordG="wordShow"></Game>
+        <button @click="befNextSelect(true)">
+            Previous
+        </button>
+        <button @click="befNextSelect(false)">
+            Next
+        </button>
+        <Game class="Game" @wordObj="selection" :wordG="wordShow"></Game>
     </div>
+    <DisplayPage class="Page" :all="all" :won="won"></DisplayPage>
 </div>
 </template>
 
@@ -28,6 +34,10 @@ export default {
             wordsArr : [],
             wordShow : {},
             titleArr : [],
+
+            selectionArr : [],
+            selectionIndex : 0,
+            selectedWord : '',
         }
     },
     created(){
@@ -67,8 +77,51 @@ export default {
             }
         }
     },
-
+    watch:{
+        selectionIndex(i){
+            this.selectionArr[i].scrollIntoView(
+                {
+                    behavior: "smooth", 
+                    block: "center"
+                });
+        }
+    },
     methods: {
+        selection(wordObjArr){
+            let wordObj = wordObjArr[0];
+            this.selectedWord = wordObjArr[1];
+            this.selectUnselect(this.selectedWord);
+            this.selectionArr = document.getElementsByClassName(wordObj.original);
+            console.log(wordObj.original);
+            this.selectionArr[this.selectionIndex].scrollIntoView();
+            this.selectionArr[this.selectionIndex].classList.add('focused');
+        },
+        selectUnselect(word){
+            if(this.wordDict[word]){
+                this.wordDict[word].selected = !this.wordDict[word].selected;
+                if(this.wordDict[word].similar !== []){
+                    this.wordDict[word].similar.forEach((w) =>{
+                        this.wordDict[w].selected = !this.wordDict[w].selected;
+                    })
+                }
+            }
+        },
+        befNextSelect(before){
+            if(this.selectionArr === []) return;
+            this.selectionArr[this.selectionIndex].classList.remove('focused');
+            let temp = this.selectionIndex;
+            if(before) {
+                temp--;
+                if(temp <= 0) temp = this.selectionArr.length -1;
+            }
+            else{
+                temp++
+                if(temp >= this.selectionArr.length -1)
+                    temp = 0;
+            }
+            this.selectionIndex = temp;
+            this.selectionArr[this.selectionIndex].classList.add('focused');
+        },
         async fetchPage(){
             let url = "https://pt.wikipedia.org/w/api.php?" + 
                     "format=json"+
@@ -196,14 +249,12 @@ export default {
                 }                
             }
             );
-            //second pass to get similar words
+            //second pass to get similar words that are NOT in the text
             this.wordsArr.forEach((obj)=>{
                 let transformed = latinise(obj.el).toLowerCase();
                 let word = obj.el.toLowerCase();
                 if(word !== transformed && wordDict[transformed]){
                     wordDict[transformed].similar.push(word);
-                    wordDict[transformed].n++;
-                    wordDict[word].n++;
                 }
                 else  if(word !== transformed && !wordDict[transformed])
                 {
@@ -211,11 +262,10 @@ export default {
                         original: word, 
                         similar:[],
                         hit:false, 
-                        n:2,
+                        n: wordDict[word].n,
                         title:wordDict[word].title,
                         selected: false}
                     wordDict[transformed].similar.push(word);
-                    if(wordDict[word]) wordDict[word].n++;
                 }
             });
             this.wordDict = wordDict;
@@ -230,8 +280,6 @@ export default {
             if(obj[word]){
                 console.log(word);
                 obj[word].hit = true;
-                if(obj[word].title) {
-                }
                 if(transformed === word){
                     if(obj[word].similar !== undefined){
                         if(obj[word].similar !== []){
@@ -249,8 +297,14 @@ export default {
         hitWord(word){
             let obj = this.changeWordObj(this.wordDict, word);
             this.wordDict = obj.wordDict;
-            this.wordShow = obj.word? {w:word, hits:obj.word.n} 
-                            : {w: word, hits:0};
+            this.wordShow = obj.word? [word,obj.word]
+                            : 
+                            [word, {original: word, 
+                            similar:[],
+                            hit:false, 
+                            n: wordDict[word].n,
+                            title:wordDict[word].title,
+                            selected: false}];
         },
         playRound(word){
 
@@ -268,11 +322,10 @@ function isLetter(c){
 
 <style>
 .Game{
-    overflow: scroll;
     height: 100px;
 }
 .Page{
-    z-index: -1;
+   z-index: -1;  
 }
 .Board{
     height:auto;
@@ -280,9 +333,9 @@ function isLetter(c){
 .Score{
     position: -webkit-sticky;
     position: sticky;
-    top:0;
+    top: 60%;
     width: 90%;
-    height:auto;
+    height: 180px;
     border: 4px;
     border-style:dashed;
     background: white; 

@@ -2,21 +2,23 @@
 import { computed } from '@vue/runtime-core'
 </script>
 <template>
+    <div class="tableView">
         <table>
             <tr>
                 <th>Palavra</th>
                 <th>Acertos</th>
             </tr>
-            <tr v-for="(w,i) in list" :key="i"
+            <tr v-for="(listObj,i) in list" :key="i"
             :class="{selected : list[i].selected, 
                     normal : !list[i].selected}"
             v-on:click = "select(i)">
-                <template v-if="w">
-                <td> {{w.w}} </td>
-                <td> {{w.hits}} </td>
+                <template v-if="listObj">
+                <td> {{listObj.word}} </td>
+                <td> {{listObj.obj.n}} </td>
                 </template>
             </tr>
         </table>
+    </div>
 </template>
 
 <script>
@@ -33,22 +35,28 @@ export default {
     methods:{
         select(i){
             this.list[this.lastIndex].selected = false;
-            this.$emit('word', this.list[i].w)
+            this.$emit('wordObj', [this.list[i].obj, this.list[i].word])
+            console.log('emiting...')
             this.list[i].selected = true;
             this.lastIndex = i;
         },
     },
     watch:{   
-        wordG(word){
+        wordG(wordSendArr){
             console.log("game");
-            if(word)
-            this.list.push({w:word.w, hits:word.hits, selected:false});
+            if(wordSendArr !== [])
+            this.list.push({word:wordSendArr[0], 
+                        obj:wordSendArr[1], selected:false});
         }
     }
 }
 </script>
 <style scoped>
     
+    .tableView{
+        height:inherit;
+        overflow: scroll;
+    }
     table {
         width: 100%;
     }

@@ -36,41 +36,27 @@ export default {
             }
             else return false;
         },
+        selectedIf(word){
+            if(this.all.wordDict[word.toLowerCase()]){
+                return this.all.wordDict[word.toLowerCase()].selected;
+            }
+            else return false;
+        },
         showOrHide(word){
-            console.log(this.won);
-            if(this.hitOrNot(word.el) 
-                || word.type === 'char'
+            if(word.type === 'char'){
+                return 'show';
+            }
+            else if(this.hitOrNot(word.el) 
                 || this.won){
-                    return 'show';
+                    return this.selectedIf(word.el) ? 
+                        word.el.toLowerCase() + ' selected' :
+                        word.el.toLowerCase() + ' show' ;
             }
             else{
-                return 'hide';
+                return word.el.toLowerCase() + ' hide';
             }
         },
-        selection(word){
-            this.selectUnselect(this.lastSelection);
-            this.selectUnselect(word);
-            this.lastSelection = word;
-            this.selectionArr = document.getElementsByClassName(word);
-            this.selectionIndex = 0;
-        },
-        selectUnselect(word){
-            this.wordDict[word].selected = !this.wordDict[word].selected;
-            this.wordDict[word].similar.forEach((s) =>{
-                this.wordDict[s].selected = !this.wordDict[s].selected;
-            });
-        },
-        nextSelection(){
-            this.selectionIndex.last = this.selectionIndex.curr;
-            this.selectionIndex.curr++;
-            if(this.selectionIndex.curr === this.selectionArr.length){
-                this.selectionIndex=0;
-            }
-        },
-        stopSelect(){
-            this.selectionIndex = -1;
-            this.selectionArr = [];
-        },
+        
 
     }
 }
@@ -112,6 +98,12 @@ export default {
 
     color: var(--fg);
     background-color: var(--bg);
+}
+.selected{
+    background-color: rgb(218, 198, 89);
+}
+.focused{
+    background-color: rgb(115, 218, 89);
 }
 
 </style>
